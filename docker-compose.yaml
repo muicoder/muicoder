@@ -1,0 +1,243 @@
+version: '3.6'
+
+x-svc_deploy: &deploy
+    labels: ###or list
+        AUTHOR: $USER
+    mode: replicated # replicated, global
+    endpoint_mode: vip # vip, dnsrr
+    replicas: 1
+    resources:
+        limits:
+            cpus: '0.5'
+            memory: 50m
+        reservations:
+            cpus: '0.2'
+            memory: 20m
+    restart_policy:
+        condition: any # none, on-failure
+        delay: 0s
+        max_attempts: 0
+        window: 0s
+    update_config:
+        parallelism: 1
+        delay: 0s
+        failure_action: pause # continue, rollback
+        monitor: 0s
+        max_failure_ratio: 0.2
+        order: stop-first # start-first
+    placement: 
+        constraints:
+            - node.role == manager
+        preferences:
+            - spread: node.label.zone
+x-svc_build: &build
+        labels: ###or list
+            AUTHOR: $USER
+        context: .
+        dockerfile: Dockerfile
+        args: ###or list
+            AUTHOR: $USER
+            HTTP_PROXY: $HTTP_PROXY
+            HTTPS_PROXY: $HTTPS_PROXY
+        cache_from:
+            - alpine:3.4
+            - centos:7
+        network: host
+        target: build-env
+        shm_size: 64m
+x-svc_healthcheck: &healthcheck
+    #disable: true
+    #test: ["NONE"]
+    test: ["CMD", "ping", "-c 5", "bing.com"]
+    #test: ["CMD-SHELL", "ping", "-c 5", "bing.com || exit 1"]
+    test: ping -c 5 bing.com || exit 1
+    interval: 1m30s
+    retries: 3
+    timeout: 10s
+    start_period: 40s
+x-svc_logging: &logging
+    driver: json-file
+    options:
+        max-size: 200k
+        max-file: 10
+x-svc_networks: &networks
+    my_network:
+        aliases:
+            - my_aliases
+        ipv4_address: 172.172.172.172
+x-svc_volumes: &volumes
+    - source: my_volume
+      target: /data
+      read_only: false
+      type: volume # volume: {nocopy: false}, bind: {propagation: rprivate}, tmpfs: {size: 64m}
+      volume:
+          nocopy: false
+x-svc_configs: &configs
+    - source: my_config
+      target: /my_config
+      uid: '0'
+      gid: '0'
+      mode: 0444
+x-svc_secrets: &secrets
+    - source: my_secret
+      target: /run/secrets/my_secret
+      uid: '0'
+      gid: '0'
+      mode: 0444
+x-svc_default: &default
+    labels: ###or list
+        AUTHOR: $USER
+    deploy: *deploy
+    build: *build
+    image: alpine:latest
+    read_only: false
+    stdin_open: false
+    tty: true
+    restart: 'no' # always, on-failure, unless-stopped
+    stop_signal: SIGTERM
+    stop_grace_period: 30s
+    expose:
+        - '80'
+        - 8080
+    ports:
+        - '80'
+        - 8080
+        - 8443:8443/tcp
+        - 22-23:22-23
+        - target: 53
+          published: 53
+          protocol: tcp # udp
+          mode: host # ingress
+    user: root
+    working_dir: /opt
+    #env_file: web.env
+    env_file:
+        - web.env
+        - db.env
+    environment: ###or list
+        AUTHOR: $USER
+    #entrypoint: entrypoint.sh start
+    entrypoint:
+        - entrypoint.sh
+        - start
+    #command: whoami -b
+    command:
+        - whoami
+        - -b
+    healthcheck: *healthcheck
+    logging: *logging
+    container_name: $USER
+    hostname: Docker
+    isolation: default # hyperv, process
+    ipc: host
+    pid: host
+    userns_mode: host
+    #network_mode: none # bridge, host, service:[name], container:[name/id]
+    mac_address: 02:42:ac:11:65:43
+    networks: *networks ###or list
+    volumes: *volumes ###or list
+    tmpfs: /run
+    tmpfs:
+        - /run
+        - /tmp
+    configs: *configs ###or list
+    secrets: *secrets ###or list
+    cap_add:
+        - ALL
+    cap_drop:
+        - NET_ADMIN
+        - SYS_ADMIN
+    cgroup_parent: cgroup
+    security_opt:
+        - label:user:USER
+        - label:role:ROLE
+    devices:
+        - /dev/tty:/dev/tty
+        - /dev/sda:/dev/sda
+    privileged: true
+    shm_size: 64m
+    sysctls: ###or list
+        net.core.somaxconn: 1024
+        net.ipv4.tcp_syncookies: 0
+    ulimits:
+        nproc: 65535
+        nofile:
+            soft: 20000
+            hard: 40000
+    depends_on:
+        - db
+        - redis
+    external_links:
+        - redis_1
+        - project_db_1:mysql
+    extra_hosts: ###or list
+        baidu: 123.125.114.144
+    domainname: domain.com
+    #dns: 9.9.9.9
+    dns:
+        - 8.8.8.8
+        - 9.9.9.9
+    #dns_search: example.com
+    dns_search:
+        - dc1.example.com
+        - dc2.example.com
+
+services:
+    web: *default
+    db:
+        << : *default
+        depends_on: []
+    redis:
+        << : *default
+        depends_on: []
+
+networks:
+    my_network:
+        labels: ###or list
+            AUTHOR: $USER
+        driver: bridge
+        #attachable: false # overlay
+        driver_opts: {}
+        ipam:
+            driver: default
+            config:
+                - subnet: 172.172.172.1/24
+        internal: false
+        external: false
+        #external: true
+        #    name: my_external_network
+        #name: my_network ### If set, external is true.
+
+volumes:
+    my_volume:
+        labels: ###or list
+            AUTHOR: $USER
+        name: my_volume
+########docker plugin install --grant-all-permissions vieux/sshfs:latest
+        driver: vieux/sshfs:latest
+        driver_opts:
+                sshcmd: ${SSHFS_USER:-root}@${SSHFS_HOST:-127.0.0.1}:~
+                password: ${SSHFS_PW:-root}
+        external: false
+        #external:
+        #    name: my_external_volume
+
+secrets:
+    my_secret:
+        labels: ###or list
+            AUTHOR: $USER
+        name: my_secret
+        file: ./my_secret.txt
+        external: true
+        #external:
+        #    name: my_external_secret
+
+configs:
+    my_config:
+        labels: ###or list
+            AUTHOR: $USER
+        name: my_config
+        file: ./my_config.txt
+        external: true
+        #external:
+        #    name: my_external_config
