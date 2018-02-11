@@ -1,0 +1,54 @@
+version: '3.4'
+
+x-service: &svc
+    image: zookeeper:$ZOO_VERSION
+    restart: always
+    user: root
+x-environment: &env
+    ZOO_USER: zookeeper
+    ZOO_SERVERS: server.1=zoo1:2888:3888 server.2=zoo2:2888:3888 server.3=zoo3:2888:3888
+    ZOO_PORT: 2181
+
+services:
+    zoo1: 
+        << : *svc
+        hostname: zoo1
+        environment:
+            << : *env
+            ZOO_MY_ID: 1
+        ports:
+            - 2181:2181
+        volumes:
+            - $DATA/zk1:$ZOO_DATA_DIR
+            - logs:$ZOO_DATA_LOG_DIR
+        tmpfs:
+            - /tmp
+    zoo2: 
+        << : *svc
+        hostname: zoo2
+        environment:
+            << : *env
+            ZOO_MY_ID: 2
+        ports:
+            - 2182:2181
+        volumes:
+            - $DATA/zk2:$ZOO_DATA_DIR
+            - logs:$ZOO_DATA_LOG_DIR
+        tmpfs:
+            - /tmp
+    zoo3: 
+        << : *svc
+        hostname: zoo3
+        environment:
+            << : *env
+            ZOO_MY_ID: 3
+        ports:
+            - 2183:2181
+        volumes:
+            - $DATA/zk3:$ZOO_DATA_DIR
+            - logs:$ZOO_DATA_LOG_DIR
+        tmpfs:
+            - /tmp
+
+volumes:
+    logs:
