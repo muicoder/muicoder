@@ -35,3 +35,18 @@ EOF
 
 source ~/$file
 ```
+
+# 离线打包迁移部署
+
+```bash
+file=.bash_profile
+path=/var/lib/toolbox/$USER-fedora-latest
+[[ -d $path ]] && find $path/var/ -type f -newer $path/media/root -exec rm -f {} \;
+tar -Jcvf /opt/coreos_offline_bash-completion.xz /opt/bin/docker-compose ~root/$file ~core/$file $path
+```
+
+# 解压离线打包文件
+
+```bash
+tar -Jxvf coreos_offline_bash-completion.xz -C /
+```
