@@ -7,8 +7,9 @@ __直接登入系统：__
 使用 toolbox 安装，输入以下内容开始自动安装。。。
 
 ```bash
-bashrc=$(readlink ~/.bashrc) || bashrc=/usr/share/skel/.bashrc; rm -f ~/.bashrc && cp $bashrc ~/.bashrc
-cat >> ~/.bashrc <<- \EOF
+file=.bash_profile
+rc=$(readlink ~/$file) || rc=/usr/share/skel/$file; rm -f ~/$file && cp $rc ~/$file
+cat >> ~/$file <<- \EOF
 up-docker-bash () {
     toolbox -c "cat /etc/os-release \
     && curl -fsSL https://github.com/docker/cli/raw/master/contrib/completion/bash/docker -o /usr/share/bash-completion/completions/docker \
@@ -32,5 +33,5 @@ fi
 export DOCKER_HIDE_LEGACY_COMMANDS=true
 EOF
 
-source ~/.bashrc
+source ~/$file
 ```
