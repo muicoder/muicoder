@@ -23,6 +23,7 @@ up-docker-bash () {
 
 if [[ -f /var/bash-completion/bash_completion ]] ; then
     . /var/bash-completion/bash_completion
+    source <(rkt completion bash)
 else
     path=/opt/bin
     sudo mkdir --parents $path; sudo chown --recursive $USER:$USER /opt
