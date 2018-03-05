@@ -26,7 +26,7 @@ if [[ -f /var/bash-completion/bash_completion ]] ; then
     source <(rkt completion bash)
 else
     path=/opt/bin
-    sudo mkdir --parents $path; sudo chown --recursive $USER:$USER /opt
+    sudo mkdir --parents $path; sudo chown --recursive $USER:$USER $path
     #安装 docker-compose 最新构建版本
     [[ $(docker-compose version) ]] || ( curl -fSL https://dl.bintray.com/docker-compose/master/docker-compose-Linux-x86_64 -o $path/docker-compose && chmod +x $path/docker-compose )
     toolbox dnf install -y bash-completion && up-docker-bash
@@ -42,12 +42,16 @@ source ~/$file
 ```bash
 file=.bash_profile
 path=/var/lib/toolbox/$USER-fedora-latest
-[[ -d $path ]] && find $path/var/ -type f -newer $path/media/root -exec rm -f {} \;
-tar -Jcvf /opt/coreos_offline_bash-completion.xz /opt/bin/docker-compose ~root/$file ~core/$file $path
+sudo find $path/var/ -type f -newer $path/media/root | xargs sudo rm -f; sudo rm -rf $path/lost+found/
+[[ $USER == core ]] && sudo cp -au $path/ ${path/$USER/root}/ || sudo cp -au $path/ ${path/$USER/core}/
+sudo tar -Jcvf ~/coreos_offline_bash-completion.xz /opt/bin/docker-compose ~root/$file ~core/$file ${path/$USER/root}/
 ```
 
 # 解压离线打包文件
 
 ```bash
-tar -Jxvf coreos_offline_bash-completion.xz -C /
+sudo tar -Jxvf coreos_offline_bash-completion.xz -C /
+path=/var/lib/toolbox/root-fedora-latest
+sudo cp -ru $path/usr/share/bash-completion/ /var/
+sudo cp -au $path/ ${path/root/$USER/
 ```
